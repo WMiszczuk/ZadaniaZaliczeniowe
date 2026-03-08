@@ -1,0 +1,2 @@
+saldo 30000.0
+zakup kot 3.0 5
