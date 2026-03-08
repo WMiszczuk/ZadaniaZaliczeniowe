@@ -1,6 +1,25 @@
+import json
+import os
+
 saldo = 0
 magazyn = {}
 historia = []
+
+
+if os.path.exists("saldo.txt"):
+    with open("saldo.txt", "r") as f:
+        saldo = float(f.read())
+
+
+if os.path.exists("magazyn.txt"):
+    with open("magazyn.txt", "r") as f:
+        magazyn = json.load(f)
+
+
+if os.path.exists("historia.txt"):
+    with open("historia.txt", "r") as f:
+        historia = f.read().splitlines()
+
 
 def menu():
     print("""
@@ -85,11 +104,11 @@ while True:
         except ValueError:
             print("Błędne dane")
 
-    # konto
+
     elif komenda == "konto":
         print(f"Stan konta: {saldo} zł")
 
-    # lista
+
     elif komenda == "lista":
         if not magazyn:
             print("Magazyn jest pusty")
@@ -97,7 +116,7 @@ while True:
             for nazwa, dane in magazyn.items():
                 print(f"{nazwa} | cena: {dane['cena']} | ilość: {dane['ilosc']}")
 
-    # magazyn
+
     elif komenda == "magazyn":
         nazwa = input("Podaj nazwę produktu: ")
         if nazwa in magazyn:
@@ -106,7 +125,7 @@ while True:
         else:
             print("Brak produktu w magazynie.")
 
-    # przegląd
+
     elif komenda == "przegląd":
         if not historia:
             print("Brak zapisanych operacj")
@@ -131,12 +150,20 @@ while True:
         except ValueError:
             print("Błędny zakres")
 
-    # koniec
     elif komenda == "koniec":
+ #zapisywanie
+
+        with open("saldo.txt", "w") as f:
+            f.write(str(saldo))
+
+
+        with open("magazyn.txt", "w") as f:
+            json.dump(magazyn, f)
+
+
+        with open("historia.txt", "a") as f:
+            for operacja in historia:
+                f.write(operacja + "\n")
+
         print("Koniec programu")
         break
-
-    else:
-        print("Nieznana komenda")
-
-    menu()
