@@ -1,28 +1,58 @@
 import json
 import os
 
-saldo = 0
-magazyn = {}
-historia = []
+
+class Manager:
+
+    def __init__(self):
+        self.saldo = 0
+        self.magazyn = {}
+        self.historia = []
+        self.actions = {}
+
+        self.load_data()
+
+    def assign(self, name, func):
+        self.actions[name] = func
 
 
-if os.path.exists("saldo.txt"):
-    with open("saldo.txt", "r") as f:
-        saldo = float(f.read())
+    def execute(self, name):
+        if name in self.actions:
+            self.actions[name]()
+        else:
+            print("Nieznana komenda")
 
+    # wczytywanie
 
-if os.path.exists("magazyn.txt"):
-    with open("magazyn.txt", "r") as f:
-        magazyn = json.load(f)
+    def load_data(self):
 
+        if os.path.exists("saldo.txt"):
+            with open("saldo.txt") as f:
+                self.saldo = float(f.read())
 
-if os.path.exists("historia.txt"):
-    with open("historia.txt", "r") as f:
-        historia = f.read().splitlines()
+        if os.path.exists("magazyn.txt"):
+            with open("magazyn.txt") as f:
+                self.magazyn = json.load(f)
 
+        if os.path.exists("historia.txt"):
+            with open("historia.txt") as f:
+                self.historia = f.read().splitlines()
 
-def menu():
-    print("""
+    # zapis
+    def save_data(self):
+
+        with open("saldo.txt", "w") as f:
+            f.write(str(self.saldo))
+
+        with open("magazyn.txt", "w") as f:
+            json.dump(self.magazyn, f)
+
+        with open("historia.txt", "w") as f:
+            for operacja in self.historia:
+                f.write(operacja + "\n")
+
+    def menu(self):
+        print("""
 Dostępne komendy:
 saldo
 sprzedaż
@@ -34,136 +64,131 @@ przegląd
 koniec
 """)
 
-menu()
+    # kom3ndy
 
-while True:
-    komenda = input("Podaj komendę: ").lower()
-
-    # saldo
-    if komenda == "saldo":
+    def saldo_cmd(self):
         try:
-            kwota = float(input("Podaj kwotę do dodania / odjęcia: "))
-            saldo += kwota
-            historia.append(f"saldo {kwota}")
+            kwota = float(input("Podaj kwotę: "))
+            self.saldo += kwota
+            self.historia.append(f"saldo {kwota}")
         except ValueError:
-            print("Błędna kwota.")
+            print("Błędna kwota")
 
-    # zakup
-    elif komenda == "zakup":
+    def zakup_cmd(self):
+
         try:
             nazwa = input("Nazwa produktu: ")
-            cena = float(input("Cena produktu: "))
-            ilosc = int(input("Liczba sztuk: "))
+            cena = float(input("Cena: "))
+            ilosc = int(input("Ilość: "))
 
             if cena <= 0 or ilosc <= 0:
-                print("Cena i ilość muszą być dodatnie.")
-                continue
+                print("Cena i ilość muszą być dodatnie")
+                return
 
             koszt = cena * ilosc
-            if saldo - koszt < 0:
-                print("Brak środków na koncie.")
-                continue
 
-            saldo -= koszt
+            if self.saldo - koszt < 0:
+                print("Brak środków")
+                return
 
-            if nazwa in magazyn:
-                magazyn[nazwa]["ilosc"] += ilosc
-                magazyn[nazwa]["cena"] = cena
+            self.saldo -= koszt
+
+            if nazwa in self.magazyn:
+                self.magazyn[nazwa]["ilosc"] += ilosc
+                self.magazyn[nazwa]["cena"] = cena
             else:
-                magazyn[nazwa] = {"cena": cena, "ilosc": ilosc}
+                self.magazyn[nazwa] = {"cena": cena, "ilosc": ilosc}
 
-            historia.append(f"zakup {nazwa} {cena} {ilosc}")
-
-        except ValueError:
-            print("Błędne dane.")
-
-    # sprzedaż
-    elif komenda == "sprzedaż":
-        try:
-            nazwa = input("Nazwa produktu: ")
-            cena = float(input("Cena produktu: "))
-            ilosc = int(input("Liczba sztuk: "))
-
-            if nazwa not in magazyn:
-                print("Brak produktu w magazynie.")
-                continue
-
-            if ilosc <= 0 or cena <= 0:
-                print("Cena i ilość muszą być dodatnie.")
-                continue
-
-            if magazyn[nazwa]["ilosc"] < ilosc:
-                print("Za mało sztuk w magazynie.")
-                continue
-
-            magazyn[nazwa]["ilosc"] -= ilosc
-            saldo += cena * ilosc
-
-            historia.append(f"sprzedaż {nazwa} {cena} {ilosc}")
+            self.historia.append(f"zakup {nazwa} {cena} {ilosc}")
 
         except ValueError:
             print("Błędne dane")
 
-
-    elif komenda == "konto":
-        print(f"Stan konta: {saldo} zł")
-
-
-    elif komenda == "lista":
-        if not magazyn:
-            print("Magazyn jest pusty")
-        else:
-            for nazwa, dane in magazyn.items():
-                print(f"{nazwa} | cena: {dane['cena']} | ilość: {dane['ilosc']}")
-
-
-    elif komenda == "magazyn":
-        nazwa = input("Podaj nazwę produktu: ")
-        if nazwa in magazyn:
-            dane = magazyn[nazwa]
-            print(f"{nazwa} | cena: {dane['cena']} | ilość: {dane['ilosc']}")
-        else:
-            print("Brak produktu w magazynie.")
-
-
-    elif komenda == "przegląd":
-        if not historia:
-            print("Brak zapisanych operacj")
-            continue
-
-        print(f"Liczba zapisanych komend: {len(historia)}")
-
-        od = input("Od (puste = początek): ")
-        do = input("Do (puste = koniec): ")
+    def sprzedaz_cmd(self):
 
         try:
-            start = int(od) if od else 0
-            end = int(do) if do else len(historia)
+            nazwa = input("Nazwa produktu: ")
+            cena = float(input("Cena: "))
+            ilosc = int(input("Ilość: "))
 
-            if start < 0 or end > len(historia):
-                print("Zakres poza listą")
-                continue
+            if nazwa not in self.magazyn:
+                print("Brak produktu")
+                return
 
-            for i in range(start, end):
-                print(i, historia[i])
+            if self.magazyn[nazwa]["ilosc"] < ilosc:
+                print("Za mało w magazynie")
+                return
+
+            self.magazyn[nazwa]["ilosc"] -= ilosc
+            self.saldo += cena * ilosc
+
+            self.historia.append(f"sprzedaż {nazwa} {cena} {ilosc}")
 
         except ValueError:
-            print("Błędny zakres")
+            print("Błędne dane")
 
-    elif komenda == "koniec":
- #zapisywanie
+    def konto_cmd(self):
+        print(f"Stan konta: {self.saldo}")
 
-        with open("saldo.txt", "w") as f:
-            f.write(str(saldo))
+    def lista_cmd(self):
 
+        if not self.magazyn:
+            print("Magazyn pusty")
+            return
 
-        with open("magazyn.txt", "w") as f:
-            json.dump(magazyn, f)
+        for nazwa, dane in self.magazyn.items():
+            print(nazwa, dane)
 
+    def magazyn_cmd(self):
 
-        with open("historia.txt", "a") as f:
-            for operacja in historia:
-                f.write(operacja + "\n")
+        nazwa = input("Produkt: ")
 
+        if nazwa in self.magazyn:
+            print(self.magazyn[nazwa])
+        else:
+            print("Brak produktu")
+
+    def przeglad_cmd(self):
+
+        if not self.historia:
+            print("Brak historii")
+            return
+
+        print("Liczba komend:", len(self.historia))
+
+        od = input("Od: ")
+        do = input("Do: ")
+
+        start = int(od) if od else 0
+        end = int(do) if do else len(self.historia)
+
+        if start < 0 or end > len(self.historia):
+            print("Zakres poza listą")
+            print("Liczba zapisanych komend:", len(self.historia))
+            return
+
+        for i in range(start, end):
+            print(i, self.historia[i])
+
+    def koniec_cmd(self):
+
+        self.save_data()
         print("Koniec programu")
-        break
+        exit()
+
+
+manager = Manager()
+
+manager.assign("saldo", manager.saldo_cmd)
+manager.assign("zakup", manager.zakup_cmd)
+manager.assign("sprzedaż", manager.sprzedaz_cmd)
+manager.assign("konto", manager.konto_cmd)
+manager.assign("lista", manager.lista_cmd)
+manager.assign("magazyn", manager.magazyn_cmd)
+manager.assign("przegląd", manager.przeglad_cmd)
+manager.assign("koniec", manager.koniec_cmd)
+
+while True:
+    manager.menu()
+    komenda = input("Podaj komendę: ").lower()
+    manager.execute(komenda)
